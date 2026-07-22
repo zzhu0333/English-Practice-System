@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlayLingo · Prototype v6</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#F3F1EB; --card:#FFFFFF; --ink:#262232; --muted:#807C8C; --line:#E7E3DA;
+    --purple:#6C4CB6; --purple-soft:#EDE7F8; --purple-line:#DDD3F0;
+    --gold:#EFB93A; --gold-soft:#FBF0D2;
+    --green:#3E9E76; --green-soft:#E3F1EA; --coral:#E86A57;
+    --disp:'Noto Sans TC',system-ui,sans-serif; --body:'Noto Sans TC',system-ui,sans-serif;
+    --mono:'Space Grotesk',system-ui,sans-serif;
+    --r:20px; --shadow:0 8px 26px rgba(38,34,50,.07);
+  }
+  *{box-sizing:border-box} html,body{margin:0}
+  body{font-family:var(--body);color:var(--ink);background:var(--canvas);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:22px;line-height:1.6}
+  .stage{width:100%;max-width:900px;position:relative;z-index:1}
+  .screen{display:none;animation:fade .3s ease}.screen.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  h1,h2,h3,h4{font-family:var(--disp);margin:0;font-weight:900;letter-spacing:-.01em}
+  .eyebrow{font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--purple)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:26px}
+  .btn{font-family:var(--body);font-weight:700;font-size:15px;cursor:pointer;border:none;border-radius:13px;padding:12px 20px;background:var(--purple);color:#fff;transition:filter .15s,transform .06s}
+  .btn:hover{filter:brightness(1.06)}.btn:active{transform:translateY(1px)}
+  .btn-gold{background:var(--gold);color:#4A3708}
+  .btn-ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line)}
+  .btn-soft{background:var(--purple-soft);color:var(--purple)}
+  .btn-sm{padding:8px 13px;font-size:13px;border-radius:10px}
+  .link{background:none;border:none;color:var(--muted);cursor:pointer;font-family:var(--body);font-weight:700;font-size:14px}
+  .link:hover{color:var(--ink)}
+  .muted{color:var(--muted)}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:999px;font-size:12px;font-weight:700}
+  .pill-ok{background:var(--green-soft);color:var(--green)}.pill-draft{background:var(--gold-soft);color:#9A6C12}.pill-wait{background:#EFEDE6;color:#8A8794}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .brandmark{display:flex;align-items:center;gap:10px;font-family:var(--disp);font-weight:900;font-size:21px}
+  .dot{width:32px;height:32px;border-radius:10px;background:var(--purple);color:#fff;display:grid;place-items:center;font-size:16px;font-family:var(--mono);font-weight:700}
+  .tag{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--muted)}
+
+  label.fld{display:block;font-weight:700;font-size:13px;margin:16px 0 6px}
+  input.inp,select.inp,textarea.inp{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;font-family:var(--body);font-size:15px;background:#fff;color:var(--ink)}
+  input.inp:focus,select.inp:focus,textarea.inp:focus{outline:none;border-color:var(--purple)}
+
+  .console{display:grid;grid-template-columns:210px 1fr;gap:20px}
+  .side{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;height:max-content}
+  .navi{display:block;width:100%;text-align:left;border:none;background:none;padding:11px 13px;border-radius:11px;font-family:var(--body);font-weight:700;font-size:15px;color:var(--muted);cursor:pointer;margin-bottom:4px}
+  .navi.on{background:var(--purple-soft);color:var(--purple)}
+  .panel{display:none}.panel.on{display:block}
+  .packgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .pack{border:1px solid var(--line);border-radius:15px;padding:18px;background:#fff}
+  .pack h4{font-size:16px;margin-bottom:8px;font-weight:700}
+  .chips{display:flex;gap:10px;flex-wrap:wrap}
+  .chip{padding:9px 15px;border-radius:11px;border:1.5px solid var(--line);background:#fff;cursor:pointer;font-weight:700;font-size:14px}
+  .chip.on{background:var(--purple-soft);border-color:var(--purple-line);color:var(--purple)}
+  .bar{height:12px;background:#EFEDE6;border-radius:8px;overflow:hidden}.bar>i{display:block;height:100%;background:var(--purple)}
+  .row{display:flex;gap:14px;flex-wrap:wrap}.row>div{flex:1;min-width:150px}
+  table.stu{width:100%;border-collapse:collapse;margin-top:8px}
+  table.stu th,table.stu td{text-align:left;padding:11px 8px;border-bottom:1px solid var(--line);font-size:14px}
+  table.stu th{font-weight:700;color:var(--muted);font-size:12px}
+  .rowlink{cursor:pointer}.rowlink:hover td{background:#FAF9F5}
+  .code-badge{font-family:var(--mono);font-weight:700;background:var(--gold-soft);color:#8A5F0F;border-radius:8px;padding:3px 11px}
+
+  .stu-wrap{max-width:480px;margin:0 auto}
+  .codebox{font-family:var(--mono);font-size:42px;font-weight:700;letter-spacing:14px;text-align:center;background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:18px;min-height:76px}
+  .pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+  .key{font-family:var(--mono);font-size:26px;font-weight:700;padding:16px;border-radius:14px;border:1px solid var(--line);background:#fff;cursor:pointer;color:var(--ink);box-shadow:var(--shadow)}
+  .key:active{transform:translateY(1px)}
+  .key.wide{background:var(--purple);color:#fff;border-color:var(--purple)}
+
+  /* HALL game cards */
+  .gamecard{display:flex;align-items:center;gap:14px;border:1px solid var(--line);border-radius:16px;padding:16px;background:#fff;margin-bottom:12px}
+  .gi{width:52px;height:52px;border-radius:14px;background:var(--purple-soft);display:grid;place-items:center;font-size:26px}
+
+  /* GAME shared */
+  .g-top{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+  .g-x{width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:#fff;font-size:17px;cursor:pointer;color:var(--muted)}
+  .g-play{width:120px;height:120px;border-radius:50%;border:none;background:var(--gold);color:#4A3708;font-size:44px;cursor:pointer;box-shadow:0 10px 26px rgba(239,185,58,.4);display:block;margin:8px auto 4px}
+  .g-play:active{transform:translateY(2px)}
+  .g-play.sm{width:64px;height:64px;font-size:26px;box-shadow:0 6px 16px rgba(239,185,58,.4)}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:22px}
+  .opt{aspect-ratio:1.5/1;border-radius:18px;border:1.5px solid var(--line);background:#fff;font-size:56px;cursor:pointer;display:grid;place-items:center;box-shadow:var(--shadow);transition:transform .1s}
+  .opt:hover{transform:translateY(-2px)}
+  .opt.correct{background:var(--green-soft);border-color:var(--green)}
+  .opt.wrong{background:#FBE7E3;border-color:var(--coral);animation:shake .4s}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+
+  /* Match */
+  .match-cols{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:12px}
+  .mword,.mimg{border:1.5px solid var(--line);border-radius:14px;padding:16px;text-align:center;cursor:pointer;background:#fff;font-weight:700;font-size:18px}
+  .mimg{font-size:40px;padding:12px}
+  .mword.sel,.mimg.sel{border-color:var(--purple);background:var(--purple-soft)}
+  .mword.done,.mimg.done{border-color:var(--green);background:var(--green-soft);cursor:default;opacity:.7}
+  .mword.bad,.mimg.bad{animation:shake .4s}
+
+  /* Spell */
+  .slots{display:flex;justify-content:center;gap:8px;margin:16px 0 22px;flex-wrap:wrap}
+  .slot{width:40px;height:48px;border-radius:10px;border:2px dashed var(--line);display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:22px}
+  .slot.filled{border-style:solid;border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .tiles{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+  .tile{width:44px;height:48px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-family:var(--mono);font-weight:700;font-size:20px;cursor:pointer;box-shadow:var(--shadow)}
+  .tile:active{transform:translateY(1px)}.tile.used{opacity:.25;pointer-events:none}
+  .tile.bad{animation:shake .4s;border-color:var(--coral)}
+
+  /* Flash */
+  .flashcard{border:1.5px solid var(--line);border-radius:20px;padding:44px 20px;text-align:center;min-height:190px;display:grid;place-items:center;cursor:pointer;background:#fff;box-shadow:var(--shadow)}
+  .flashcard .fw{font-family:var(--disp);font-weight:900;font-size:40px}
+  .flashcard .fe{font-size:72px}
+  .flash-ctrl{display:flex;justify-content:center;gap:10px;margin-top:16px}
+
+  .result{text-align:center;padding:24px}.result .big{font-size:46px;margin:8px 0;letter-spacing:2px}
+  .confetti{position:fixed;top:-20px;font-size:22px;animation:fall 2.6s linear forwards;pointer-events:none;z-index:40}
+  @keyframes fall{to{transform:translateY(108vh) rotate(360deg);opacity:.85}}
+  .deco{position:fixed;border-radius:44% 56% 52% 48%/52% 46% 54% 48%;z-index:0;opacity:.5}
+
+  /* overlays */
+  .overlay{position:fixed;inset:0;background:rgba(38,34,50,.42);z-index:70;display:none;place-items:center;padding:24px}
+  .overlay.show{display:grid}
+  .mini{background:#fff;border-radius:18px;padding:26px;max-width:340px;width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.2)}
+  .mini h3{font-size:22px}.mini p{color:var(--muted);margin:8px 0 20px}
+
+  #cardModal{display:none;position:fixed;inset:0;background:rgba(38,34,50,.4);z-index:70;padding:24px;overflow:auto}
+  #cardModal .sheet{background:#fff;border-radius:18px;max-width:720px;margin:20px auto;padding:24px}
+  .modal-actions{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .logincard{border:2px dashed var(--purple-line);border-radius:14px;padding:16px}
+  .logincard .who{font-weight:700;font-size:15px}.logincard .cls{font-size:12px;color:var(--muted)}
+  .logincard .cd{font-family:var(--mono);font-weight:700;font-size:30px;letter-spacing:6px;color:var(--purple);margin:8px 0 4px}
+  .logincard .how{font-size:11px;color:var(--muted)}
+
+  #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:#fff;padding:13px 22px;border-radius:12px;font-weight:700;box-shadow:var(--shadow);transition:.25s;z-index:80;max-width:88vw;text-align:center}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media(max-width:640px){.console{grid-template-columns:1fr}.side{display:flex;gap:6px;overflow:auto}.navi{white-space:nowrap;margin:0}.packgrid,.cards{grid-template-columns:1fr}}
+  @media print{body{padding:0}.stage,#toast,.deco,.overlay{display:none!important}
+    #cardModal{position:static!important;display:block!important;background:#fff!important;padding:0}
+    #cardModal .sheet{box-shadow:none;max-width:100%}.modal-actions{display:none!important}}
+</style>
+</head>
+<body>
+<div class="deco" style="width:180px;height:180px;background:var(--gold);top:6%;left:-50px"></div>
+<div class="deco" style="width:140px;height:140px;background:var(--purple-soft);bottom:8%;right:-40px;opacity:.8"></div>
+
+<div class="stage">
+
+  <!-- STUDENT LOGIN (預設入口) -->
+  <section id="s-login" class="screen active">
+    <div class="topbar">
+      <div class="brandmark"><span class="dot" style="background:var(--gold);color:#4A3708">P</span> PlayLingo <span class="tag">STUDENT</span></div>
+      <button class="link" style="font-size:12px" onclick="go('t-login')">TEACHER →</button>
+    </div>
+    <div class="stu-wrap">
+      <div style="text-align:center;margin-bottom:16px">
+        <span class="eyebrow">Login</span>
+        <h2 style="font-size:28px;margin-top:6px">Enter your code</h2>
+      </div>
+      <div id="code" class="codebox"></div>
+      <div class="pad">
+        <button class="key" onclick="dig('1')">1</button><button class="key" onclick="dig('2')">2</button><button class="key" onclick="dig('3')">3</button>
+        <button class="key" onclick="dig('4')">4</button><button class="key" onclick="dig('5')">5</button><button class="key" onclick="dig('6')">6</button>
+        <button class="key" onclick="dig('7')">7</button><button class="key" onclick="dig('8')">8</button><button class="key" onclick="dig('9')">9</button>
+        <button class="key" onclick="del()">⌫</button><button class="key" onclick="dig('0')">0</button><button class="key wide" onclick="stuLogin()">✓</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- TEACHER LOGIN (另一入口) -->
+  <section id="t-login" class="screen">
+    <div class="topbar"><button class="link" onclick="go('s-login')">← STUDENT</button><div class="brandmark"><span class="dot">P</span> TEACHER</div></div>
+    <div class="card stu-wrap">
+      <span class="eyebrow">Staff</span>
+      <h2 style="font-size:26px;margin-top:8px">老師登入</h2>
+      <p class="muted" style="font-size:13px;margin-top:4px">這是獨立的老師入口（正式版為另一個網址）。</p>
+      <label class="fld">Email</label><input class="inp" value="teacher@abc-english.tw">
+      <label class="fld">密碼</label><input class="inp" type="password" value="demo1234">
+      <button class="btn" style="width:100%;margin-top:22px" onclick="go('t-console')">登入</button>
+    </div>
+  </section>
+
+  <!-- TEACHER CONSOLE -->
+  <section id="t-console" class="screen">
+    <div class="topbar"><div class="brandmark"><span class="dot">P</span> 老師後台</div><button class="link" onclick="go('t-login')">登出 →</button></div>
+    <div class="console">
+      <div class="side">
+        <button class="navi on" onclick="tab('lib',this)">教材庫</button>
+        <button class="navi" onclick="tab('cls',this)">班級</button>
+        <button class="navi" onclick="tab('assign',this)">派作業</button>
+        <button class="navi" onclick="tab('stat',this)">成效</button>
+      </div>
+      <div>
+        <div id="p-lib" class="panel on card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+            <div><span class="eyebrow">Library</span><h2 style="font-size:24px;margin-top:4px">教材庫</h2></div>
+            <button class="btn btn-soft btn-sm" onclick="toast('（原型）開啟教材包編輯：拖入圖片/音檔資料夾，依檔名自動配對')">＋ 新增教材包</button>
+          </div>
+          <div class="packgrid">
+            <div class="pack"><h4>Unit 1 · Colors</h4><span class="pill pill-ok">已完成 · 8 張</span></div>
+            <div class="pack"><h4>Unit 2 · Food</h4><span class="pill pill-ok">已完成 · 10 張</span></div>
+            <div class="pack"><h4>Unit 3 · Animals</h4><span class="pill pill-ok">已完成 · 12 張</span></div>
+            <div class="pack" style="border-style:dashed"><h4>Unit 4 · Weather</h4><span class="pill pill-draft">草稿 · 缺 2 音檔</span></div>
+          </div>
+        </div>
+
+        <div id="p-cls" class="panel card">
+          <div id="clsListView">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+              <div><span class="eyebrow">Classes</span><h2 style="font-size:24px;margin-top:4px">班級</h2></div>
+              <button class="btn btn-soft btn-sm" onclick="toggleClassForm()">＋ 新增班級</button>
+            </div>
+            <div id="classForm" style="display:none;margin-bottom:16px;background:#FAF9F5;border:1px solid var(--line);border-radius:14px;padding:18px">
+              <div class="row">
+                <div><label class="fld" style="margin-top:0">班級名稱</label><input id="ncName" class="inp" placeholder="例：Elementary 3C"></div>
+                <div><label class="fld" style="margin-top:0">上課時段</label><input id="ncTime" class="inp" placeholder="例：週五 17:00"></div>
+              </div>
+              <button class="btn btn-sm" style="margin-top:14px" onclick="addClass()">建立班級</button>
+            </div>
+            <div id="classList"></div>
+            <p class="muted" style="margin-top:14px;font-size:13px">匯入名單時，系統自動為每人產生一組唯一數字代號（可重設）。</p>
+          </div>
+          <div id="clsStudentView" style="display:none">
+            <button class="link" onclick="backToClasses()">← 回班級列表</button>
+            <h2 id="stuTitle" style="font-size:24px;margin:12px 0 4px"></h2>
+            <p class="muted" id="stuSub" style="margin-bottom:16px"></p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+              <button class="btn btn-soft btn-sm" onclick="toggleImport()">匯入名單</button>
+              <button class="btn btn-soft btn-sm" onclick="addOneStudent()">＋ 新增學生</button>
+              <button class="btn btn-ghost btn-sm" onclick="showLoginCards()">列印登入卡</button>
+            </div>
+            <div id="importBox" style="display:none;margin:10px 0;background:#FAF9F5;border:1px solid var(--line);border-radius:14px;padding:16px">
+              <label class="fld" style="margin-top:0">一行一個學生暱稱，系統自動配代號</label>
+              <textarea id="importText" class="inp" rows="4" placeholder="Emily&#10;Jack&#10;Mia"></textarea>
+              <button class="btn btn-sm" style="margin-top:10px" onclick="runImport()">匯入並產生代號</button>
+            </div>
+            <table class="stu"><thead><tr><th>暱稱</th><th>登入代號</th><th style="text-align:right">操作</th></tr></thead><tbody id="stuBody"></tbody></table>
+          </div>
+        </div>
+
+        <div id="p-assign" class="panel card">
+          <span class="eyebrow">Assign</span>
+          <h2 style="font-size:24px;margin:4px 0 4px">派今日作業</h2>
+          <p class="muted" style="margin-bottom:4px">勾選的遊戲，會出現在學生大廳裡。</p>
+          <label class="fld">教材包</label>
+          <select class="inp"><option>Unit 3 · Animals（12 張）</option><option>Unit 2 · Food（10 張）</option></select>
+          <label class="fld">遊戲模式（可複選，會直接連到學生端）</label>
+          <div class="chips" id="assignChips">
+            <div class="chip on" data-g="listen" onclick="this.classList.toggle('on')">聽音辨圖</div>
+            <div class="chip on" data-g="match" onclick="this.classList.toggle('on')">連連看</div>
+            <div class="chip on" data-g="spell" onclick="this.classList.toggle('on')">拼字達人</div>
+            <div class="chip on" data-g="flash" onclick="this.classList.toggle('on')">閃卡</div>
+          </div>
+          <div class="row" style="margin-top:6px">
+            <div><label class="fld">班級</label><select id="assignClass" class="inp"></select></div>
+            <div><label class="fld">作答次數</label><select class="inp"><option>無限練習 · 取最高分</option><option>限 1 次</option></select></div>
+          </div>
+          <button class="btn" style="width:100%;margin-top:20px" onclick="doAssign()">產生並指派</button>
+        </div>
+
+        <div id="p-stat" class="panel card">
+          <div id="statClassList">
+            <span class="eyebrow">Insights</span>
+            <h2 style="font-size:24px;margin:4px 0 16px">成效 · 選擇班級</h2>
+            <div id="statClasses"></div>
+          </div>
+          <div id="statClassView" style="display:none">
+            <button class="link" onclick="backToStatClasses()">← 回班級</button>
+            <h2 id="scTitle" style="font-size:24px;margin:12px 0 4px"></h2>
+            <div style="font-weight:700;font-size:13px;margin:14px 0 6px">全班完成率</div>
+            <div class="bar"><i id="scBar" style="width:0%"></i></div>
+            <div class="muted" id="scDone" style="margin:6px 0 18px"></div>
+            <div style="font-weight:700;font-size:13px;margin-bottom:8px">學生成績（點姓名看個別成效）</div>
+            <table class="stu"><thead><tr><th>暱稱</th><th>狀態</th><th style="text-align:right">分數</th></tr></thead><tbody id="scBody"></tbody></table>
+          </div>
+          <div id="statStudentView" style="display:none">
+            <button class="link" onclick="backToStatClass()">← 回班級成效</button>
+            <h2 id="ssTitle" style="font-size:24px;margin:12px 0 2px"></h2>
+            <p class="muted" id="ssSub" style="margin-bottom:16px"></p>
+            <div style="font-weight:700;font-size:13px;margin-bottom:8px">作業成績</div>
+            <div id="ssAssignments"></div>
+            <div style="font-weight:700;font-size:13px;margin:18px 0 8px">最常錯的單字</div>
+            <div id="ssWrong"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STUDENT HALL -->
+  <section id="s-hall" class="screen">
+    <div class="topbar"><div class="brandmark"><span class="dot" style="background:var(--gold);color:#4A3708">P</span> Hi, Emily!</div><button class="link" onclick="go('s-login')">Log out</button></div>
+    <div class="stu-wrap">
+      <div class="card">
+        <span class="eyebrow">Today</span>
+        <h2 style="font-size:24px;margin:4px 0 2px">My Homework</h2>
+        <p class="muted" style="margin-bottom:16px">Unit 3 · Animals</p>
+        <div id="hallGames"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GAME: LISTEN & PICK -->
+  <section id="g-listen" class="screen">
+    <div class="stu-wrap">
+      <div class="g-top"><button class="g-x" onclick="openLeave()">✕</button><div class="bar" style="flex:1"><i id="l-prog" style="width:0%"></i></div><span id="l-count" style="font-family:var(--mono);font-weight:700">1/4</span></div>
+      <button class="g-play" onclick="speak(LISTEN[li].word)">🔊</button>
+      <p class="muted" style="text-align:center;margin:2px 0 0">Tap to listen</p>
+      <div class="opts" id="l-opts"></div>
+    </div>
+  </section>
+
+  <!-- GAME: MATCH -->
+  <section id="g-match" class="screen">
+    <div class="stu-wrap">
+      <div class="g-top"><button class="g-x" onclick="openLeave()">✕</button><div style="flex:1;font-family:var(--disp);font-weight:900;font-size:18px">Match!</div><span id="m-count" style="font-family:var(--mono);font-weight:700">0/4</span></div>
+      <p class="muted" style="text-align:center">Tap a word, then tap its picture</p>
+      <div class="match-cols"><div id="m-left"></div><div id="m-right"></div></div>
+    </div>
+  </section>
+
+  <!-- GAME: SPELL -->
+  <section id="g-spell" class="screen">
+    <div class="stu-wrap">
+      <div class="g-top"><button class="g-x" onclick="openLeave()">✕</button><div class="bar" style="flex:1"><i id="sp-prog" style="width:0%"></i></div><span id="sp-count" style="font-family:var(--mono);font-weight:700">1/3</span></div>
+      <div style="text-align:center"><div id="sp-emoji" style="font-size:66px"></div>
+        <button class="g-play sm" onclick="speak(SPELL[si])">🔊</button>
+        <p class="muted" style="margin:2px 0 0">Tap the letters in order</p></div>
+      <div class="slots" id="sp-slots"></div>
+      <div class="tiles" id="sp-tiles"></div>
+    </div>
+  </section>
+
+  <!-- GAME: FLASHCARDS -->
+  <section id="g-flash" class="screen">
+    <div class="stu-wrap">
+      <div class="g-top"><button class="g-x" onclick="openLeave()">✕</button><div style="flex:1;font-family:var(--disp);font-weight:900;font-size:18px">Flashcards</div><span id="f-count" style="font-family:var(--mono);font-weight:700">1/4</span></div>
+      <div class="flashcard" id="f-card" onclick="flipCard()"></div>
+      <p class="muted" style="text-align:center;margin-top:10px">Tap the card to flip</p>
+      <div class="flash-ctrl">
+        <button class="btn btn-ghost btn-sm" onclick="flashPrev()">← Back</button>
+        <button class="btn btn-soft btn-sm" onclick="speak(FLASH[fi].w)">🔊 Listen</button>
+        <button class="btn btn-sm" onclick="flashNext()">Next →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section id="result" class="screen">
+    <div class="stu-wrap">
+      <div class="card result">
+        <div style="font-size:42px">🎉</div>
+        <div class="big" id="r-stars">⭐⭐⭐</div>
+        <h2 style="font-size:24px" id="r-title">Great job!</h2>
+        <p class="muted" id="r-sub"></p>
+        <div style="display:flex;gap:12px;justify-content:center;margin-top:20px">
+          <button class="btn btn-ghost" onclick="playAgain()">Play again 🔄</button>
+          <button class="btn" onclick="goHall()">Back home 🏠</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- LEAVE CONFIRM -->
+<div class="overlay" id="leaveModal"><div class="mini">
+  <h3>Leave now?</h3>
+  <p>If you leave, your score won’t be saved.</p>
+  <div style="display:flex;gap:10px;justify-content:center">
+    <button class="btn btn-ghost" onclick="closeLeave()">Keep playing</button>
+    <button class="btn" style="background:var(--coral)" onclick="confirmLeave()">Leave</button>
+  </div>
+</div></div>
+
+<!-- LOGIN CARDS -->
+<div id="cardModal"><div class="sheet">
+  <div class="modal-actions"><h3 id="cardTitle" style="font-size:20px">登入卡</h3>
+    <div style="display:flex;gap:10px"><button class="btn btn-ghost btn-sm" onclick="window.print()">列印</button>
+    <button class="btn btn-sm" onclick="document.getElementById('cardModal').style.display='none'">關閉</button></div></div>
+  <div class="cards" id="cardGrid"></div>
+</div></div>
+
+<div id="toast"></div>
+
+<script>
+  function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
+  function tab(p,el){document.querySelectorAll('.navi').forEach(n=>n.classList.remove('on'));el.classList.add('on');
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('on'));document.getElementById('p-'+p).classList.add('on');
+    if(p==='cls')backToClasses();if(p==='stat')backToStatClasses();}
+  let tt;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2800);}
+  function speak(w){try{const u=new SpeechSynthesisUtterance(w);u.lang='en-US';u.rate=.85;speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){toast('No sound on this device');}}
+  function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+  /* ===== ASSIGNMENT wiring ===== */
+  const GAME_META={
+    listen:{name:'Listen & Pick',icon:'🔊',desc:'Hear it, pick the picture',start:()=>startListen()},
+    match:{name:'Match',icon:'🔗',desc:'Match word to picture',start:()=>startMatch()},
+    spell:{name:'Spell',icon:'✍️',desc:'Spell the word',start:()=>startSpell()},
+    flash:{name:'Flashcards',icon:'🗂️',desc:'Flip and learn',start:()=>startFlash()}
+  };
+  let assignment={games:['listen','match','spell','flash']};
+  function doAssign(){const on=[...document.querySelectorAll('#assignChips .chip.on')].map(c=>c.dataset.g);
+    if(!on.length){toast('請至少選一種遊戲');return;}assignment.games=on;renderHall();toast('✅ 已指派 '+on.length+' 種遊戲 · 學生登入即可看到');}
+  function renderHall(){document.getElementById('hallGames').innerHTML=assignment.games.map(g=>{const m=GAME_META[g];
+    return `<div class="gamecard"><div class="gi">${m.icon}</div><div style="flex:1"><b>${m.name}</b><div class="muted" style="font-size:13px">${m.desc}</div></div><button class="btn btn-sm" onclick="GAME_META['${g}'].start()">Start</button></div>`;}).join('')||'<p class="muted">No homework yet.</p>';}
+  function goHall(){renderHall();go('s-hall');}
+
+  /* ===== RESULT ===== */
+  let lastStart=null;
+  function showResult(stars,title,sub){document.getElementById('r-stars').textContent=stars;document.getElementById('r-title').textContent=title;document.getElementById('r-sub').innerHTML=sub;go('result');burst();}
+  function playAgain(){if(lastStart)lastStart();}
+  function burst(){const em=['🎉','⭐','✨','🎊','🌟'];for(let i=0;i<26;i++){const c=document.createElement('div');c.className='confetti';c.textContent=em[i%em.length];c.style.left=Math.random()*100+'vw';c.style.animationDelay=(Math.random()*.6)+'s';document.body.appendChild(c);setTimeout(()=>c.remove(),3200);}}
+
+  /* ===== LEAVE CONFIRM ===== */
+  function openLeave(){document.getElementById('leaveModal').classList.add('show');}
+  function closeLeave(){document.getElementById('leaveModal').classList.remove('show');}
+  function confirmLeave(){closeLeave();goHall();}
+
+  /* ===== GAME 1: LISTEN & PICK ===== */
+  const LISTEN=[{word:'apple',answer:'🍎',opts:['🍎','🍌','🐱','🐶']},{word:'dog',answer:'🐶',opts:['🐰','🐶','🍎','🐱']},
+    {word:'banana',answer:'🍌',opts:['🍌','🐶','🍇','🐱']},{word:'cat',answer:'🐱',opts:['🐶','🍌','🐱','🍎']}];
+  let li=0,lscore=0,llock=false;
+  function startListen(){lastStart=startListen;li=0;lscore=0;go('g-listen');loadListen();}
+  function loadListen(){llock=false;const q=LISTEN[li];document.getElementById('l-count').textContent=(li+1)+'/'+LISTEN.length;
+    document.getElementById('l-prog').style.width=(li/LISTEN.length*100)+'%';const box=document.getElementById('l-opts');box.innerHTML='';
+    q.opts.forEach(o=>{const b=document.createElement('button');b.className='opt';b.textContent=o;b.onclick=()=>pickL(b,o,q.answer);box.appendChild(b);});setTimeout(()=>speak(q.word),350);}
+  function pickL(el,val,ans){if(llock)return;if(val===ans){llock=true;el.classList.add('correct');lscore++;setTimeout(()=>{li++;li<LISTEN.length?loadListen():showResult(lscore===4?'⭐⭐⭐':lscore>=2?'⭐⭐':'⭐','You got '+lscore+' / '+LISTEN.length+'!','You earned <b style="color:var(--purple)">+15 ⭐</b>');},800);}else{el.classList.add('wrong');setTimeout(()=>el.classList.remove('wrong'),450);}}
+
+  /* ===== GAME 2: MATCH ===== */
+  const MPAIRS=[{w:'apple',e:'🍎'},{w:'dog',e:'🐶'},{w:'banana',e:'🍌'},{w:'cat',e:'🐱'}];
+  let mSel=null,mDone=0;
+  function startMatch(){lastStart=startMatch;mSel=null;mDone=0;go('g-match');
+    document.getElementById('m-count').textContent='0/'+MPAIRS.length;
+    const L=document.getElementById('m-left'),R=document.getElementById('m-right');L.innerHTML='';R.innerHTML='';
+    MPAIRS.forEach(p=>{const d=document.createElement('div');d.className='mword';d.textContent=p.w;d.dataset.w=p.w;d.style.marginBottom='12px';d.onclick=()=>selWord(d);L.appendChild(d);});
+    shuffle(MPAIRS).forEach(p=>{const d=document.createElement('div');d.className='mimg';d.textContent=p.e;d.dataset.e=p.e;d.style.marginBottom='12px';d.onclick=()=>selImg(d);R.appendChild(d);});}
+  function selWord(d){if(d.classList.contains('done'))return;document.querySelectorAll('.mword.sel').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');mSel=d;}
+  function selImg(d){if(d.classList.contains('done')||!mSel)return;const want=MPAIRS.find(p=>p.w===mSel.dataset.w).e;
+    if(d.dataset.e===want){d.classList.add('done');mSel.classList.add('done');mSel.classList.remove('sel');mSel=null;mDone++;
+      document.getElementById('m-count').textContent=mDone+'/'+MPAIRS.length;
+      if(mDone===MPAIRS.length)setTimeout(()=>showResult('⭐⭐⭐','All matched! 🎉','Great job!'),600);
+    }else{d.classList.add('bad');const s=mSel;s.classList.add('bad');setTimeout(()=>{d.classList.remove('bad');s.classList.remove('bad');},450);mSel.classList.remove('sel');mSel=null;}}
+
+  /* ===== GAME 3: SPELL ===== */
+  const SPELL=['cat','dog','apple'];
+  let si=0,sPtr=0;
+  function startSpell(){lastStart=startSpell;si=0;go('g-spell');loadSpell();}
+  function loadSpell(){sPtr=0;const w=SPELL[si];document.getElementById('sp-count').textContent=(si+1)+'/'+SPELL.length;
+    document.getElementById('sp-prog').style.width=(si/SPELL.length*100)+'%';
+    document.getElementById('sp-emoji').textContent={cat:'🐱',dog:'🐶',apple:'🍎'}[w]||'🔤';
+    const slots=document.getElementById('sp-slots');slots.innerHTML='';
+    for(let i=0;i<w.length;i++){const s=document.createElement('div');s.className='slot';s.id='slot'+i;slots.appendChild(s);}
+    const distract={cat:['o','n'],dog:['a','t'],apple:['o','t']}[w]||[];
+    const letters=shuffle(w.split('').concat(distract));
+    const tiles=document.getElementById('sp-tiles');tiles.innerHTML='';
+    letters.forEach(ch=>{const t=document.createElement('button');t.className='tile';t.textContent=ch;t.onclick=()=>tapTile(t,ch);tiles.appendChild(t);});
+    setTimeout(()=>speak(w),350);}
+  function tapTile(t,ch){const w=SPELL[si];if(ch===w[sPtr]){const s=document.getElementById('slot'+sPtr);s.textContent=ch;s.classList.add('filled');t.classList.add('used');sPtr++;
+      if(sPtr===w.length){setTimeout(()=>{si++;si<SPELL.length?loadSpell():showResult('⭐⭐⭐','You spelled them all! 🎉','Nice work!');},700);}
+    }else{t.classList.add('bad');setTimeout(()=>t.classList.remove('bad'),450);}}
+
+  /* ===== GAME 4: FLASHCARDS ===== */
+  const FLASH=[{w:'apple',e:'🍎'},{w:'dog',e:'🐶'},{w:'banana',e:'🍌'},{w:'cat',e:'🐱'}];
+  let fi=0,fFlip=false;
+  function startFlash(){lastStart=startFlash;fi=0;fFlip=false;go('g-flash');renderFlash();}
+  function renderFlash(){document.getElementById('f-count').textContent=(fi+1)+'/'+FLASH.length;
+    const c=document.getElementById('f-card');c.innerHTML=fFlip?`<div class="fe">${FLASH[fi].e}</div>`:`<div class="fw">${FLASH[fi].w}</div>`;}
+  function flipCard(){fFlip=!fFlip;renderFlash();if(!fFlip)return;}
+  function flashPrev(){if(fi>0){fi--;fFlip=false;renderFlash();}}
+  function flashNext(){if(fi<FLASH.length-1){fi++;fFlip=false;renderFlash();}else{showResult('⭐','All done! 🎉','Good reviewing!');}}
+
+  /* ===== CLASS / STUDENT DATA ===== */
+  let seq=200;function genCode(){return String(Math.floor(1000+Math.random()*9000));}
+  const WRONGPOOL=['giraffe','elephant','rabbit','monkey','tiger','zebra'];
+  let classes=[
+    {id:1,name:'Elementary 1A',time:'週二 18:00',students:[{id:11,nick:'Emily',code:'2207',done:true,score:92},{id:12,nick:'Jack',code:'4830',done:true,score:78},{id:13,nick:'Mia',code:'9165',done:false,score:null}]},
+    {id:2,name:'Elementary 2B',time:'週四 18:00',students:[{id:21,nick:'Leo',code:'3341',done:true,score:85},{id:22,nick:'Zoe',code:'7708',done:true,score:70}]}
+  ];
+  let currentClassId=null;
+  function renderClasses(){const box=document.getElementById('classList');box.innerHTML='';
+    classes.forEach(c=>{const d=document.createElement('div');d.className='pack';d.style.cssText='margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap';
+      d.innerHTML=`<div><h4>${c.name}</h4><span class="muted">${c.students.length} 位學生 · ${c.time}</span></div><div style="display:flex;gap:8px"><button class="btn btn-soft btn-sm" onclick="manageStudents(${c.id})">管理學生</button><button class="btn btn-ghost btn-sm" onclick="editClass(${c.id})">編輯</button></div>`;box.appendChild(d);});
+    const sel=document.getElementById('assignClass');if(sel)sel.innerHTML=classes.map(c=>`<option>${c.name}</option>`).join('');}
+  function toggleClassForm(){const f=document.getElementById('classForm');f.style.display=f.style.display==='none'?'block':'none';}
+  function addClass(){const n=document.getElementById('ncName').value.trim(),t=document.getElementById('ncTime').value.trim();if(!n){toast('請輸入班級名稱');return;}classes.push({id:++seq,name:n,time:t||'待定',students:[]});document.getElementById('ncName').value='';document.getElementById('ncTime').value='';toggleClassForm();renderClasses();toast('✅ 已建立班級「'+n+'」');}
+  function editClass(id){const c=classes.find(x=>x.id===id);const n=prompt('班級名稱：',c.name);if(n===null)return;const t=prompt('上課時段：',c.time)||c.time;c.name=n.trim()||c.name;c.time=t;renderClasses();toast('已更新班級');}
+  function manageStudents(id){currentClassId=id;const c=classes.find(x=>x.id===id);document.getElementById('clsListView').style.display='none';document.getElementById('clsStudentView').style.display='block';document.getElementById('stuTitle').textContent=c.name;document.getElementById('importBox').style.display='none';renderStudents();}
+  function backToClasses(){document.getElementById('clsStudentView').style.display='none';document.getElementById('clsListView').style.display='block';renderClasses();}
+  function renderStudents(){const c=classes.find(x=>x.id===currentClassId);const b=document.getElementById('stuBody');b.innerHTML='';document.getElementById('stuSub').textContent=c.time+' · '+c.students.length+' 位學生';
+    if(!c.students.length){b.innerHTML='<tr><td colspan="3" class="muted" style="padding:16px 8px">還沒有學生，點「匯入名單」或「新增學生」開始。</td></tr>';return;}
+    c.students.forEach(s=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${s.nick}</td><td><span class="code-badge">${s.code}</span></td><td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="resetCode(${s.id})">重設代號</button><button class="btn btn-ghost btn-sm" style="color:var(--coral)" onclick="removeStudent(${s.id})">移除</button></td>`;b.appendChild(tr);});}
+  function toggleImport(){const x=document.getElementById('importBox');x.style.display=x.style.display==='none'?'block':'none';}
+  function runImport(){const c=classes.find(x=>x.id===currentClassId);const lines=document.getElementById('importText').value.split('\n').map(s=>s.trim()).filter(Boolean);if(!lines.length){toast('請先輸入至少一個暱稱');return;}lines.forEach(n=>c.students.push({id:++seq,nick:n,code:genCode(),done:false,score:null}));document.getElementById('importText').value='';toggleImport();renderStudents();toast('✅ 已匯入 '+lines.length+' 位學生並自動配代號');}
+  function addOneStudent(){const c=classes.find(x=>x.id===currentClassId);const n=prompt('學生暱稱：');if(!n||!n.trim())return;c.students.push({id:++seq,nick:n.trim(),code:genCode(),done:false,score:null});renderStudents();toast('已新增學生');}
+  function resetCode(sid){const c=classes.find(x=>x.id===currentClassId);const s=c.students.find(x=>x.id===sid);s.code=genCode();renderStudents();toast('已重設 '+s.nick+' 的代號（舊碼立即失效）');}
+  function removeStudent(sid){const c=classes.find(x=>x.id===currentClassId);const s=c.students.find(x=>x.id===sid);if(!confirm('移除 '+s.nick+'？'))return;c.students=c.students.filter(x=>x.id!==sid);renderStudents();toast('已移除學生');}
+  function showLoginCards(){const c=classes.find(x=>x.id===currentClassId);document.getElementById('cardTitle').textContent=c.name+' · 學生登入卡';
+    document.getElementById('cardGrid').innerHTML=c.students.map(s=>`<div class="logincard"><div class="who">${s.nick}</div><div class="cls">${c.name}</div><div class="cd">${s.code}</div><div class="how">開啟 PlayLingo 學生頁 → 輸入這組代號即可開始</div></div>`).join('')||'<p class="muted">此班尚無學生。</p>';document.getElementById('cardModal').style.display='block';}
+
+  /* ===== STATS ===== */
+  let statClassId=null;
+  function renderStatClasses(){document.getElementById('statClasses').innerHTML=classes.map(c=>{const done=c.students.filter(s=>s.done).length;
+    return `<div class="pack" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="openStatClass(${c.id})"><div><h4>${c.name}</h4><span class="muted">${c.time} · ${c.students.length} 位</span></div><div style="text-align:right"><div style="font-weight:700">${c.students.length?Math.round(done/c.students.length*100):0}%</div><div class="muted" style="font-size:12px">完成率</div></div></div>`;}).join('');}
+  function backToStatClasses(){document.getElementById('statClassView').style.display='none';document.getElementById('statStudentView').style.display='none';document.getElementById('statClassList').style.display='block';renderStatClasses();}
+  function openStatClass(id){statClassId=id;const c=classes.find(x=>x.id===id);document.getElementById('statClassList').style.display='none';document.getElementById('statStudentView').style.display='none';document.getElementById('statClassView').style.display='block';document.getElementById('scTitle').textContent=c.name+' 成效';
+    const done=c.students.filter(s=>s.done).length,pct=c.students.length?Math.round(done/c.students.length*100):0;document.getElementById('scBar').style.width=pct+'%';document.getElementById('scDone').textContent=done+' / '+c.students.length+' 位已完成';
+    document.getElementById('scBody').innerHTML=c.students.map(s=>{const status=s.done?'<span class="pill pill-ok">已完成</span>':'<span class="pill pill-wait">未作答</span>';const sc=s.done?`<b>${s.score}</b>`:'<span class="muted">—</span>';return `<tr class="rowlink" onclick="openStatStudent(${s.id})"><td>${s.nick}</td><td>${status}</td><td style="text-align:right">${sc}</td></tr>`;}).join('')||'<tr><td colspan="3" class="muted" style="padding:16px 8px">此班尚無學生。</td></tr>';}
+  function backToStatClass(){openStatClass(statClassId);}
+  function openStatStudent(sid){const c=classes.find(x=>x.id===statClassId);const s=c.students.find(x=>x.id===sid);document.getElementById('statClassView').style.display='none';document.getElementById('statStudentView').style.display='block';document.getElementById('ssTitle').textContent=s.nick;document.getElementById('ssSub').textContent=c.name+' · 代號 '+s.code;const stars=s.score>=90?'⭐⭐⭐':s.score>=75?'⭐⭐':s.score?'⭐':'';
+    document.getElementById('ssAssignments').innerHTML=s.done?`<div class="pack" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><div><b>Unit 3 · Animals</b><div class="muted" style="font-size:12px">聽音辨圖</div></div><div style="text-align:right"><b>${s.score} 分</b><div style="font-size:14px">${stars}</div></div></div>`:'<p class="muted">這位學生還沒完成任何作業。</p>';
+    document.getElementById('ssWrong').innerHTML=s.done?WRONGPOOL.slice(0,3).map((w,i)=>`<div class="pack" style="margin-bottom:8px;display:flex;justify-content:space-between"><b>${w}</b><span class="muted">錯 ${3-i} 次</span></div>`).join(''):'<p class="muted">—</p>';}
+
+  /* ===== STUDENT LOGIN ===== */
+  let code='';function dig(n){if(code.length<4){code+=n;renderCode();}}function del(){code=code.slice(0,-1);renderCode();}
+  function renderCode(){document.getElementById('code').textContent=code.padEnd(4,'·');}
+  function stuLogin(){if(code.length<4){toast('Enter 4 numbers');return;}code='';renderCode();goHall();}renderCode();
+
+  renderClasses();renderStatClasses();renderHall();
+</script>
+</body>
+</html>
